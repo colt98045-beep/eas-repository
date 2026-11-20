@@ -4,7 +4,7 @@ A local, open-source dashboard for monitoring U.S. Emergency Alert System (EAS) 
 
 It runs entirely on your machine, proxies the public GWES Central Alert Repository API and NOAA CAP feeds, and presents them in a clean interface with filtering, notifications, history, and more.
 
-**Status:** Initial release (v1). Name is temporary pending final confirmation; the current name is descriptive and non-conflicting.
+**Status:** v1.0.0-beta — usable early release. Core features are working; some polish and edge-case handling may still improve. Project name is temporary pending final confirmation.
 
 ## Features
 - Live GWES CAR + NOAA CAP alerts
