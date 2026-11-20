@@ -20,6 +20,10 @@ limitations under the License.
 <title>EAS Repository</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ef4444">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root { --bg:#070b14; --surface:#0f1623; --surface-2:#1a2332; --border:rgba(255,255,255,.08); --text:#f1f5f9; --muted:#94a3b8; --accent:#ef4444; --amber:#f59e0b; --radius:12px; }
   body.theme-light { --bg:#f8fafc; --surface:#fff; --surface-2:#f1f5f9; --border:#e2e8f0; --text:#0f172a; --muted:#64748b; --accent:#dc2626; }
@@ -130,6 +134,7 @@ limitations under the License.
 <div class="tabs">
   <button class="tab active" data-t="alerts">Active</button>
   <button class="tab" data-t="history">History</button>
+  <button class="tab" data-t="map">Map</button>
   <button class="tab" data-t="radar">Radar</button>
   <button class="tab" data-t="links">Links</button>
   <button class="tab" data-t="stats">Stats</button>
@@ -156,7 +161,19 @@ limitations under the License.
 </div>
 <div id="main">
   <div id="alerts"></div>
-  <div id="history" style="display:none"></div>
+  <div id="history" style="display:none">
+    <div style="padding:10px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label>Timeline: <input type="range" id="timeline" min="0" max="100" value="100" style="width:200px"></label>
+      <span id="timelineLabel">Now</span>
+      <button onclick="resetTimeline()">Reset</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+  <div id="map" style="display:none">
+    <h3 style="color:var(--muted);margin-top:0">Alert Map (approximate)</h3>
+    <div id="mapContainer" style="height:500px;border-radius:12px;overflow:hidden"></div>
+    <p style="font-size:.8rem;color:var(--muted)">Markers are approximate centroids. Click for details.</p>
+  </div>
   <div id="radar" style="display:none">
     <h3 style="color:var(--muted);margin-top:0">NWS National Radar Loop</h3>
     <img id="radarImg" src="https://radar.weather.gov/ridge/standard/CONUS_loop.gif" alt="Radar">
@@ -215,6 +232,11 @@ limitations under the License.
       </div>
     </div>
     <div class="setting-row"><span>Clear history</span><button onclick="hist=[];localStorage.removeItem('easHist');renderHistory();toast('History cleared')">Clear</button></div>
+    <div class="setting-row" style="flex-direction:column;align-items:stretch">
+      <span>Notification rules</span>
+      <textarea id="rules" placeholder="One rule per line: TOR|SVR|FFW in my area&#10;Any extreme" style="width:100%;height:60px;margin-top:4px"></textarea>
+      <small style="color:var(--muted)">Simple keywords. Matches event or severity. "in my area" checks FIPS.</small>
+    </div>
     <div class="setting-row"><span>Export settings pack</span><button onclick="exportSettings()">Export</button></div>
     <div class="setting-row"><span>Import settings pack</span><button onclick="document.getElementById('importFile').click()">Import</button>
       <input type="file" id="importFile" accept=".json" style="display:none" onchange="importSettings(this)">
@@ -263,11 +285,12 @@ function startApp() {
   document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
     document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
     t.classList.add("active");
-    ["alerts","history","radar","links","stats","detail"].forEach(id => document.getElementById(id).style.display = "none");
+    ["alerts","history","map","radar","links","stats","detail"].forEach(id => document.getElementById(id).style.display = "none");
     document.getElementById(t.dataset.t).style.display = "block";
     document.getElementById("ctrl").style.display = t.dataset.t === "alerts" ? "flex" : "none";
     if (t.dataset.t === "history") renderHistory();
     if (t.dataset.t === "stats") renderStats();
+    if (t.dataset.t === "map") { initMap(); setTimeout(updateMap, 100); }
   });
   document.getElementById("setBtn").onclick = () => {
     document.getElementById("myFips").value = [...myFips].join(",");
@@ -338,6 +361,7 @@ async function load() {
         hist.unshift({ ...a, ts: Date.now() });
         if (hist.length > 200) hist.pop();
         if (sound && Date.now() > muteUntil) beep();
+        checkRules(a);
         const isLocal = [...myFips].some(f => (a.fips || "").includes(f));
         if (isLocal && !notifiedLocal.has(key)) {
           notifiedLocal.add(key);
@@ -399,7 +423,7 @@ function showDetail(i) {
     <div class="meta">Areas: ${a.fips || a.areas || "N/A"}</div>
     <p>${a.description || a.instruction || "No additional details."}</p>
     ${a.audio ? `<audio controls src="${a.audio}"></audio>` : ""}`;
-  ["alerts","history","radar","links","stats"].forEach(id => document.getElementById(id).style.display = "none");
+  ["alerts","history","map","radar","links","stats"].forEach(id => document.getElementById(id).style.display = "none");
   document.getElementById("detail").style.display = "block";
 }
 function showList() {
@@ -412,12 +436,20 @@ function togglePin(id) {
   renderAlerts();
 }
 function renderHistory() {
-  const el = document.getElementById("history");
-  if (!hist.length) { el.innerHTML = '<div class="empty">No history yet</div>'; return; }
-  el.innerHTML = hist.slice(0, 50).map(a => `<div class="alert" style="cursor:default">
+  const slider = document.getElementById("timeline");
+  const label = document.getElementById("timelineLabel");
+  const list = document.getElementById("historyList");
+  if (!hist.length) { list.innerHTML = '<div class="empty">No history yet</div>'; return; }
+  const pct = +slider.value / 100;
+  const now = Date.now();
+  const oldest = hist.length ? Math.min(...hist.map(h => h.ts || now)) : now;
+  const cutoff = oldest + (now - oldest) * pct;
+  label.textContent = pct >= 0.99 ? "Now" : new Date(cutoff).toLocaleString();
+  const filtered = hist.filter(h => (h.ts || now) <= cutoff);
+  list.innerHTML = filtered.slice(0, 50).map(a => `<div class="alert" style="cursor:default">
     <strong>${a.headline || a.event || "Past alert"}</strong>
     <div class="meta">${new Date(a.ts).toLocaleString()} · ${a.source || ""}</div>
-  </div>`).join("");
+  </div>`).join("") || '<div class="empty">No alerts before this time</div>';
 }
 function renderStats() {
   const counts = {};
@@ -433,6 +465,7 @@ function renderStats() {
   ).join("");
 }
 function saveSettings() {
+  saveRules();
   myFips = new Set(document.getElementById("myFips").value.split(",").map(s => s.trim()).filter(Boolean));
   localStorage.setItem("myFips", [...myFips].join(","));
   localStorage.setItem("comp", comp ? "1" : "0");
@@ -483,7 +516,8 @@ function exportSettings() {
     comp: comp,
     notif: notifEnabled,
     refRate: refRate,
-    sourceFilter: document.getElementById("sourceFilter").value
+    sourceFilter: document.getElementById("sourceFilter").value,
+    rules: rules
   };
   const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -513,12 +547,91 @@ function importSettings(input) {
       if (pack.notif !== undefined) { notifEnabled = pack.notif; localStorage.setItem("notif", notifEnabled ? "1" : "0"); }
       if (pack.refRate !== undefined) { refRate = pack.refRate; localStorage.setItem("ref", refRate); }
       if (pack.sourceFilter) document.getElementById("sourceFilter").value = pack.sourceFilter;
+      if (pack.rules) { rules = pack.rules; localStorage.setItem("easRules", JSON.stringify(rules)); loadRules(); }
       toast("Settings pack imported");
       load();
     } catch (err) { toast("Invalid settings pack"); }
   };
   reader.readAsText(file);
   input.value = "";
+}
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(console.error);
+}
+let map, mapMarkers = [];
+let rules = JSON.parse(localStorage.getItem("easRules") || "[]");
+function loadRules() {
+  const ta = document.getElementById("rules");
+  if (ta) ta.value = rules.join("\n");
+}
+function saveRules() {
+  const ta = document.getElementById("rules");
+  if (!ta) return;
+  rules = ta.value.split("\n").map(s => s.trim()).filter(Boolean);
+  localStorage.setItem("easRules", JSON.stringify(rules));
+}
+function checkRules(a) {
+  for (const r of rules) {
+    const lower = r.toLowerCase();
+    const isLocal = [...myFips].some(f => (a.fips || "").includes(f));
+    const text = ((a.event || "") + " " + (a.severity || "") + " " + (a.headline || "")).toLowerCase();
+    if (lower.includes("in my area") && !isLocal) continue;
+    const keywords = lower.replace("in my area", "").split(/[|,]/).map(s => s.trim()).filter(Boolean);
+    if (keywords.some(k => text.includes(k))) {
+      notify("Rule match: " + r, a.headline || a.event);
+      if (sound && Date.now() > muteUntil) beep();
+      break;
+    }
+  }
+}
+function resetTimeline() {
+  document.getElementById("timeline").value = 100;
+  renderHistory();
+}
+function renderHistory() {
+  const slider = document.getElementById("timeline");
+  const label = document.getElementById("timelineLabel");
+  const list = document.getElementById("historyList");
+  if (!hist.length) { list.innerHTML = '<div class="empty">No history yet</div>'; return; }
+  const pct = +slider.value / 100;
+  const now = Date.now();
+  const oldest = hist.length ? Math.min(...hist.map(h => h.ts || now)) : now;
+  const cutoff = oldest + (now - oldest) * pct;
+  label.textContent = pct >= 0.99 ? "Now" : new Date(cutoff).toLocaleString();
+  const filtered = hist.filter(h => (h.ts || now) <= cutoff);
+  list.innerHTML = filtered.slice(0, 50).map(a => `<div class="alert" style="cursor:default">
+    <strong>${a.headline || a.event || "Past alert"}</strong>
+    <div class="meta">${new Date(a.ts).toLocaleString()} · ${a.source || ""}</div>
+  </div>`).join("") || '<div class="empty">No alerts before this time</div>';
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const slider = document.getElementById("timeline");
+  if (slider) slider.oninput = renderHistory;
+  loadRules();
+});
+function initMap() {
+  if (map) return;
+  map = L.map("mapContainer").setView([39.8, -98.5], 4);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(map);
+}
+function updateMap() {
+  if (!map) initMap();
+  mapMarkers.forEach(m => map.removeLayer(m));
+  mapMarkers = [];
+  alerts.forEach((a, i) => {
+    let lat = 39 + Math.random() * 10 - 5;
+    let lon = -98 + Math.random() * 20 - 10;
+    const m = L.circleMarker([lat, lon], {
+      radius: 8,
+      color: /TOR|SVR|FFW|EXTREME/i.test(a.event || a.severity || "") ? "#ff1744" : "#ef4444",
+      fillOpacity: 0.8
+    }).addTo(map);
+    m.bindPopup(`<strong>${a.headline || a.event || "Alert"}</strong><br>${a.source || ""} · ${a.severity || ""}`);
+    m.on("click", () => showDetail(i));
+    mapMarkers.push(m);
+  });
 }
 if (sessionStorage.getItem("easAuth") === "1") startApp();
 </script>
