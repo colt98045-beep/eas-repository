@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 import os
 
 API_BASE = "https://alerts.globaleas.org"
-PORT = 8080
+PORT = int(os.environ.get("EAS_PORT", "8080"))
 HTML_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
 USER_AGENT = "EASRepository/1.0 (https://github.com/colt98045-beep/eas-repository)"
 
