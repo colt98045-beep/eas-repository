@@ -1,18 +1,3 @@
-<!--
-Copyright 2026 Colt
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -125,7 +110,6 @@ limitations under the License.
   <div class="header-meta">
     <div class="badge" id="badge">0</div>
     <span id="status" style="color:var(--muted);font-size:.85rem"></span>
-    <span id="lastUpdate" style="color:var(--muted);font-size:.75rem;margin-left:8px"></span>
     <button class="icon-btn" id="fsBtn">⛶</button>
     <button class="icon-btn" id="setBtn">⚙</button>
   </div>
@@ -273,366 +257,294 @@ function tryLogin() {
 }
 function logout() { sessionStorage.removeItem("easAuth"); location.reload(); }
 function changePassword() {
-  const n = prompt("New password (min 4 chars)");
-  if (n && n.length >= 4) { storedPass = n; localStorage.setItem("easPass", n); toast("Password updated"); }
+  const n = prompt("New password (min 3 characters):");
+  if (n && n.length >= 3) { storedPass = n; localStorage.setItem("easPass", n); toast("Password updated"); }
 }
-function startApp() {
-  buildClocks();
-  setInterval(buildClocks, 1000);
-  load();
-  document.getElementById("ntBtn").onclick = () => { document.getElementById("ntBtn").classList.toggle("primary"); load(); };
-  document.querySelectorAll(".chip").forEach(c => c.onclick = () => { c.classList.toggle("on"); load(); });
-  document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
-    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-    t.classList.add("active");
-    ["alerts","history","map","radar","links","stats","detail"].forEach(id => document.getElementById(id).style.display = "none");
-    document.getElementById(t.dataset.t).style.display = "block";
-    document.getElementById("ctrl").style.display = t.dataset.t === "alerts" ? "flex" : "none";
-    if (t.dataset.t === "history") renderHistory();
-    if (t.dataset.t === "stats") renderStats();
-    if (t.dataset.t === "map") { initMap(); setTimeout(updateMap, 100); }
-  });
-  document.getElementById("setBtn").onclick = () => {
-    document.getElementById("myFips").value = [...myFips].join(",");
-    document.getElementById("compT").textContent = comp ? "On" : "Off";
-    document.getElementById("sndT").textContent = sound ? "On" : "Off";
-    document.getElementById("notifToggle").textContent = notifEnabled ? "On" : "Off";
-    document.getElementById("refSel").value = refRate;
-    document.getElementById("modal").classList.add("open");
-  };
-  document.getElementById("fsBtn").onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
-  document.getElementById("compT").onclick = () => { comp = !comp; document.getElementById("compT").textContent = comp ? "On" : "Off"; };
-  document.getElementById("sndT").onclick = () => { sound = !sound; document.getElementById("sndT").textContent = sound ? "On" : "Off"; };
-  document.getElementById("muteBtn").onclick = () => { muteUntil = Date.now() + 300000; toast("Muted 5 min"); };
-  document.querySelectorAll(".swatch").forEach(s => s.onclick = () => {
-    document.body.className = s.dataset.th || "";
-    document.querySelectorAll(".swatch").forEach(x => x.classList.remove("on"));
-    s.classList.add("on");
-    localStorage.setItem("theme", s.dataset.th || "");
-  });
-  window.onscroll = () => document.getElementById("jumpBtn").style.display = window.scrollY > 400 ? "block" : "none";
-  const th = localStorage.getItem("theme") || "";
-  document.body.className = th;
-  document.querySelectorAll(".swatch").forEach(s => s.classList.toggle("on", s.dataset.th === th));
-  if (comp) document.getElementById("main").classList.add("compact");
+document.getElementById("loginPass").onkeydown = e => { if (e.key === "Enter") tryLogin(); };
+if (sessionStorage.getItem("easAuth") === "1") document.getElementById("loginOverlay").style.display = "none";
+function clocks() {
+  const now = new Date(), localTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zones = [["Eastern","America/New_York"],["Central","America/Chicago"],["Mountain","America/Denver"],["Pacific","America/Los_Angeles"],["Alaska","America/Anchorage"],["Hawaii","Pacific/Honolulu"]];
+  document.getElementById("clocks").innerHTML = zones.map(([n,tz]) => `<div class="clock ${tz===localTZ?"local":""}"><div class="label">${n}${tz===localTZ?" ★":""}</div><div class="time">${now.toLocaleTimeString("en-GB",{timeZone:tz,hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false})}</div></div>`).join("");
 }
-function buildClocks() {
-  const zones = [
-    { label: "UTC", tz: "UTC" },
-    { label: "Eastern", tz: "America/New_York" },
-    { label: "Central", tz: "America/Chicago" },
-    { label: "Mountain", tz: "America/Denver" },
-    { label: "Pacific", tz: "America/Los_Angeles" }
-  ];
-  const now = new Date();
-  document.getElementById("clocks").innerHTML = zones.map(z => {
-    const t = now.toLocaleTimeString("en-US", { timeZone: z.tz, hour12: false });
-    const isLocal = z.tz === Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return `<div class="clock${isLocal ? " local" : ""}"><div class="label">${z.label}</div><div class="time">${t}</div></div>`;
-  }).join("");
+setInterval(clocks, 1000); clocks();
+function toast(m, local = false) {
+  const t = document.createElement("div");
+  t.className = "toast" + (local ? " local" : "");
+  t.textContent = m;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3800);
+}
+function checkLocal(list) {
+  if (!myFips.size) return;
+  list.forEach(a => {
+    if (a.severity === "TEST") return;
+    if ((a.fipsCodes || []).some(f => myFips.has(f)) && !notifiedLocal.has(a.id)) {
+      notifiedLocal.add(a.id);
+      toast("LOCAL ALERT: " + a.type, true);
+      notify("Local Alert: " + a.type, a.translation || "");
+      if (sound && Date.now() > muteUntil) try { new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ").play(); } catch(e){}
+    }
+  });
+}
+async function loadNoaa() {
+  try {
+    const text = await (await fetch("/api/noaa")).text();
+    const xml = new DOMParser().parseFromString(text, "text/xml");
+    return [...xml.querySelectorAll("entry")].map(e => ({
+      id: "noaa-" + Math.random(),
+      type: (e.querySelector("cap\\:event, event")?.textContent || "NOAA").slice(0, 8).toUpperCase(),
+      severity: (e.querySelector("cap\\:severity, severity")?.textContent || "UNKNOWN").toUpperCase(),
+      originator: "NOAA",
+      callsign: "NWS",
+      translation: e.querySelector("summary")?.textContent || e.querySelector("title")?.textContent || "",
+      source: "noaa",
+      fipsCodes: [],
+      audioUrl: null
+    })).filter(a => a.translation);
+  } catch { return []; }
 }
 async function load() {
-  refreshes++;
-  document.getElementById("status").textContent = "Loading…";
   try {
-    const [geasRes, noaaRes] = await Promise.all([
-      fetch("/api/active").then(r => r.json()).catch(() => []),
-      fetch("/api/noaa").then(r => r.text()).then(parseNOAA).catch(() => [])
-    ]);
-    const combined = [...(Array.isArray(geasRes) ? geasRes : []), ...noaaRes];
-    const nt = document.getElementById("ntBtn").classList.contains("primary");
-    const chips = [...document.querySelectorAll(".chip.on")].map(c => c.dataset.c);
-    const typeQ = document.getElementById("qType").value.trim().toUpperCase();
-    const searchQ = document.getElementById("qSearch").value.trim().toLowerCase();
-    const src = document.getElementById("sourceFilter").value;
-    alerts = combined.filter(a => {
-      if (nt && /RWT|RMT|DMO|NPT|NAT|NST|TXF|TXB|TXO|TXP|TEST/i.test(a.event || a.type || "")) return false;
-      if (chips.length && !chips.includes((a.event || a.type || "").toUpperCase())) return false;
-      if (typeQ && !(a.event || a.type || "").toUpperCase().includes(typeQ)) return false;
-      if (searchQ && !JSON.stringify(a).toLowerCase().includes(searchQ)) return false;
-      if (src === "globaleas" && a.source !== "globaleas") return false;
-      if (src === "noaa" && a.source !== "noaa") return false;
-      return true;
-    });
-    alerts.forEach(a => {
-      const key = (a.id || a.event || "") + (a.start || a.sent || "");
-      if (!seen.has(key)) {
-        seen.add(key);
-        hist.unshift({ ...a, ts: Date.now() });
-        if (hist.length > 200) hist.pop();
-        if (sound && Date.now() > muteUntil) beep();
-        checkRules(a);
-        const isLocal = [...myFips].some(f => (a.fips || "").includes(f));
-        if (isLocal && !notifiedLocal.has(key)) {
-          notifiedLocal.add(key);
-          notify("Local Alert", a.headline || a.event || "New alert in your area");
-        }
+    const geas = await (await fetch("/api/active")).json();
+    geas.forEach(a => a.source = "globaleas");
+    const noaa = await loadNoaa();
+    const tests = alerts.filter(a => String(a.id).startsWith("999"));
+    const combined = [...tests, ...geas, ...noaa];
+    combined.forEach(a => {
+      const key = a.id || (a.type + (a.translation || "").slice(0, 40));
+      if (!seen.has(key) && a.severity !== "TEST" && seen.size > 0) {
+        notify((a.type || "ALERT") + " · " + (a.severity || ""), a.translation || a.callsign || "New alert");
+        toast("New: " + a.type);
+        if (sound && Date.now() > muteUntil) try { new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ").play(); } catch(e){}
       }
+      seen.add(key);
+      types[a.type] = (types[a.type] || 0) + 1;
     });
+    alerts = combined;
+    refreshes++;
+    geas.forEach(a => { if (!hist.find(h => h.id === a.id)) { a.ts = Date.now(); hist.unshift(a); } });
+    hist = hist.slice(0, 200);
     localStorage.setItem("easHist", JSON.stringify(hist));
-    renderAlerts();
-    document.getElementById("badge").textContent = alerts.length;
-    document.getElementById("badge").classList.toggle("hot", alerts.some(a => /TOR|SVR|FFW|TORNADO|SEVERE/i.test(a.event || "")));
-    document.getElementById("status").textContent = "Live";
-    document.getElementById("lastUpdate").textContent = new Date().toLocaleTimeString();
-  } catch (e) {
-    document.getElementById("status").textContent = "Offline / feed error — showing last data";
-    document.getElementById("lastUpdate").textContent = "(cached)";
-    console.error(e);
-    if (alerts.length) renderAlerts();
-  }
-  clearTimeout(timer);
-  if (refRate) timer = setTimeout(load, refRate * 1000);
+    render();
+    renderHistory();
+    document.getElementById("status").textContent = new Date().toLocaleTimeString();
+  } catch { document.getElementById("status").textContent = "Offline"; }
 }
-function parseNOAA(xml) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xml, "text/xml");
-  return [...doc.querySelectorAll("entry")].map(e => ({
-    source: "noaa",
-    event: e.querySelector("event")?.textContent || "",
-    headline: e.querySelector("title")?.textContent || "",
-    description: e.querySelector("summary")?.textContent || e.querySelector("description")?.textContent || "",
-    sent: e.querySelector("updated")?.textContent || "",
-    fips: [...e.querySelectorAll("areaDesc")].map(a => a.textContent).join(", "),
-    severity: e.querySelector("severity")?.textContent || "",
-    urgency: e.querySelector("urgency")?.textContent || "",
-    certainty: e.querySelector("certainty")?.textContent || ""
-  }));
-}
-function renderAlerts() {
-  const el = document.getElementById("alerts");
-  if (!alerts.length) { el.innerHTML = '<div class="empty">No active alerts matching filters</div>'; return; }
-  el.innerHTML = alerts.map((a, i) => {
-    const isLocal = [...myFips].some(f => (a.fips || "").includes(f));
-    const pinned = pins.has(a.id || i);
-    const cls = ["alert", a.source === "noaa" ? "noaa" : "", /TOR|SVR|FFW|EXTREME/i.test(a.event || a.severity || "") ? "extreme" : "", pinned ? "pinned" : "", isLocal ? "myarea" : ""].filter(Boolean).join(" ");
-    return `<div class="${cls}" onclick="showDetail(${i})">
-      <button class="pin${pinned ? " on" : ""}" onclick="event.stopPropagation();togglePin('${a.id || i}')">📌</button>
-      <strong>${a.headline || a.event || "Alert"}</strong>
-      <span class="source-pill ${a.source || "geas"}">${(a.source || "globaleas").toUpperCase()}</span>
-      <div class="meta">${a.event || ""} · ${a.sent || a.start || ""} · ${a.severity || ""}</div>
-      <div class="meta">${(a.fips || a.areas || "").toString().slice(0, 120)}</div>
+function render() {
+  const tf = document.getElementById("qType").value.trim().toUpperCase();
+  const search = document.getElementById("qSearch").value.toLowerCase();
+  const srcF = document.getElementById("sourceFilter").value;
+  const nt = document.getElementById("ntBtn").classList.contains("on");
+  let f = alerts.filter(a => {
+    if (srcF === "globaleas" && a.source === "noaa") return false;
+    if (srcF === "noaa" && a.source !== "noaa") return false;
+    if (tf && !(a.type || "").includes(tf)) return false;
+    if (nt && a.severity === "TEST") return false;
+    if (search && !(a.translation || "").toLowerCase().includes(search)) return false;
+    return true;
+  });
+  f.sort((a, b) => (pins.has(a.id) ? -1 : 1) - (pins.has(b.id) ? -1 : 1));
+  document.getElementById("badge").textContent = f.length;
+  document.getElementById("badge").className = f.some(a => a.severity !== "TEST") ? "badge hot" : "badge";
+  checkLocal(f);
+  document.getElementById("alerts").innerHTML = f.length ? f.map(a => {
+    const mine = (a.fipsCodes || []).some(fc => myFips.has(fc));
+    return `<div class="alert ${a.source === "noaa" ? "noaa" : ""} ${pins.has(a.id) ? "pinned" : ""} ${a.severity === "EXTREME" ? "extreme" : ""} ${mine ? "myarea" : ""}" onclick="openDetail('${a.id}')">
+      <button class="pin ${pins.has(a.id) ? "on" : ""}" onclick="event.stopPropagation();togglePin('${a.id}')">★</button>
+      <strong style="font-size:1.2rem">${a.type || "UNK"}</strong>
+      <span class="source-pill ${a.source === "noaa" ? "noaa" : "geas"}">${a.source === "noaa" ? "NOAA" : "GlobalEAS"}</span>
+      <div class="meta">${a.originator || "—"} · ${a.callsign || "—"} · ${a.severity || ""}</div>
+      <div>${(a.translation || "").slice(0, 220)}</div>
+      ${a.audioUrl ? `<div onclick="event.stopPropagation()"><audio controls preload="none" src="${a.audioUrl}"></audio></div>` : ""}
     </div>`;
-  }).join("");
+  }).join("") : `<div class="empty">No matching alerts</div>`;
+  const sec = Math.floor((Date.now() - start) / 1000);
+  const maxT = Math.max(...Object.values(types), 1);
+  document.getElementById("stats").innerHTML = `<div class="stats-grid">
+    <div class="stat-card"><div>Uptime</div><div class="v">${Math.floor(sec/3600)}h ${Math.floor((sec%3600)/60)}m</div></div>
+    <div class="stat-card"><div>Refreshes</div><div class="v">${refreshes}</div></div>
+    <div class="stat-card"><div>Active</div><div class="v">${alerts.length}</div></div>
+    <div class="stat-card"><div>History</div><div class="v">${hist.length}</div></div>
+  </div><h4 style="color:var(--muted);margin:12px 0 8px">Top Event Codes</h4>
+  ${Object.entries(types).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v]) => `<div style="margin:6px 0">${k} (${v})<div class="bar"><div style="width:${(v/maxT)*100}%"></div></div></div>`).join("")}`;
 }
-function showDetail(i) {
-  const a = alerts[i];
-  document.getElementById("detailContent").innerHTML = `<h2>${a.headline || a.event || "Alert Detail"}</h2>
-    <div class="meta">Source: ${(a.source || "globaleas").toUpperCase()} · Event: ${a.event || "N/A"}</div>
-    <div class="meta">Sent: ${a.sent || a.start || "N/A"} · Severity: ${a.severity || "N/A"}</div>
-    <div class="meta">Areas: ${a.fips || a.areas || "N/A"}</div>
-    <p>${a.description || a.instruction || "No additional details."}</p>
-    ${a.audio ? `<audio controls src="${a.audio}"></audio>` : ""}`;
-  ["alerts","history","map","radar","links","stats"].forEach(id => document.getElementById(id).style.display = "none");
+function openDetail(id, fromHist = false) {
+  const src = fromHist ? hist : alerts;
+  const a = src.find(x => String(x.id) === String(id));
+  if (!a) return;
+  document.getElementById("detailContent").innerHTML = `<h2 style="margin-top:0">${a.type || "UNK"} <span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-size:.75rem">${a.severity || ""}</span></h2>
+    <div class="meta">${a.originator || "—"} · ${a.callsign || "—"}</div>
+    <p style="line-height:1.5">${(a.translation || "").replace(/\n/g, "<br>")}</p>
+    ${a.fipsCodes && a.fipsCodes.length ? `<div class="meta">FIPS: ${a.fipsCodes.join(", ")}</div>` : ""}
+    ${a.protocolHeader ? `<div class="meta"><code>${a.protocolHeader}</code></div>` : ""}
+    ${a.audioUrl ? `<div style="margin-top:12px"><audio controls src="${a.audioUrl}" style="width:100%"></audio></div>` : ""}`;
+  ["alerts","history","radar","links","stats","map"].forEach(i => document.getElementById(i).style.display = "none");
   document.getElementById("detail").style.display = "block";
+  document.getElementById("ctrl").style.display = "none";
 }
 function showList() {
   document.getElementById("detail").style.display = "none";
   document.querySelector(".tab.active").click();
 }
 function togglePin(id) {
-  if (pins.has(id)) pins.delete(id); else pins.add(id);
+  pins.has(id) ? pins.delete(id) : pins.add(id);
   localStorage.setItem("easPins", JSON.stringify([...pins]));
-  renderAlerts();
-}
-function renderHistory() {
-  const slider = document.getElementById("timeline");
-  const label = document.getElementById("timelineLabel");
-  const list = document.getElementById("historyList");
-  if (!hist.length) { list.innerHTML = '<div class="empty">No history yet</div>'; return; }
-  const pct = +slider.value / 100;
-  const now = Date.now();
-  const oldest = hist.length ? Math.min(...hist.map(h => h.ts || now)) : now;
-  const cutoff = oldest + (now - oldest) * pct;
-  label.textContent = pct >= 0.99 ? "Now" : new Date(cutoff).toLocaleString();
-  const filtered = hist.filter(h => (h.ts || now) <= cutoff);
-  list.innerHTML = filtered.slice(0, 50).map(a => `<div class="alert" style="cursor:default">
-    <strong>${a.headline || a.event || "Past alert"}</strong>
-    <div class="meta">${new Date(a.ts).toLocaleString()} · ${a.source || ""}</div>
-  </div>`).join("") || '<div class="empty">No alerts before this time</div>';
-}
-function renderStats() {
-  const counts = {};
-  hist.forEach(a => { const e = a.event || "Unknown"; counts[e] = (counts[e] || 0) + 1; });
-  const max = Math.max(1, ...Object.values(counts));
-  document.getElementById("stats").innerHTML = `<div class="stats-grid">
-    <div class="stat-card"><div class="v">${alerts.length}</div><div>Active now</div></div>
-    <div class="stat-card"><div class="v">${hist.length}</div><div>History entries</div></div>
-    <div class="stat-card"><div class="v">${refreshes}</div><div>Refreshes</div></div>
-    <div class="stat-card"><div class="v">${Math.floor((Date.now() - start) / 60000)}m</div><div>Uptime</div></div>
-  </div>` + Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 10).map(([k,v]) =>
-    `<div class="stat-card"><div>${k}</div><div class="v">${v}</div><div class="bar"><div style="width:${v/max*100}%"></div></div></div>`
-  ).join("");
-}
-function saveSettings() {
-  saveRules();
-  myFips = new Set(document.getElementById("myFips").value.split(",").map(s => s.trim()).filter(Boolean));
-  localStorage.setItem("myFips", [...myFips].join(","));
-  localStorage.setItem("comp", comp ? "1" : "0");
-  localStorage.setItem("snd", sound ? "1" : "0");
-  refRate = +document.getElementById("refSel").value;
-  localStorage.setItem("ref", refRate);
-  document.getElementById("main").classList.toggle("compact", comp);
-  toast("Settings saved");
-}
-function closeM() { document.getElementById("modal").classList.remove("open"); }
-function toast(msg, local) {
-  const t = document.createElement("div");
-  t.className = "toast" + (local ? " local" : "");
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3000);
-}
-function beep() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.frequency.value = 880; o.type = "sine";
-    g.gain.setValueAtTime(0.1, ctx.currentTime);
-    o.start(); o.stop(ctx.currentTime + 0.15);
-  } catch (e) {}
-}
-function injectTest() {
-  const test = { source: "globaleas", event: "RWT", headline: "TEST ALERT — System Check", description: "This is a test injection. No real emergency.", sent: new Date().toISOString(), fips: "00000", severity: "TEST" };
-  alerts.unshift(test);
-  renderAlerts();
-  toast("Test alert injected");
+  render();
 }
 function exportJSON() {
-  const blob = new Blob([JSON.stringify(alerts, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "eas-alerts.json";
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(alerts, null, 2)], { type: "application/json" }));
+  a.download = "eas-repository.json";
   a.click();
 }
-function exportSettings() {
-  const pack = {
-    version: "1.0",
-    myFips: [...myFips],
-    theme: localStorage.getItem("theme") || "",
-    sound: sound,
-    comp: comp,
-    notif: notifEnabled,
-    refRate: refRate,
-    sourceFilter: document.getElementById("sourceFilter").value,
-    rules: rules
-  };
-  const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "eas-settings-pack.json";
-  a.click();
-  toast("Settings pack exported");
+function injectTest() {
+  const test = { id: "999" + Date.now(), type: "TOR", severity: "EXTREME", originator: "TEST", callsign: "SYSTEM", translation: "THIS IS A TEST OF THE EAS REPOSITORY. This is only a test.", source: "globaleas", fipsCodes: ["12103"], audioUrl: null, ts: Date.now() };
+  alerts.unshift(test);
+  toast("⚠ EXTREME TEST injected");
+  notify("TOR · EXTREME", "System test alert");
+  render();
+  document.querySelector('.tab[data-t="alerts"]').click();
 }
-function importSettings(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const pack = JSON.parse(e.target.result);
-      if (pack.myFips) {
-        myFips = new Set(pack.myFips);
-        localStorage.setItem("myFips", [...myFips].join(","));
-        document.getElementById("myFips").value = [...myFips].join(",");
-      }
-      if (pack.theme !== undefined) {
-        localStorage.setItem("theme", pack.theme);
-        document.body.className = pack.theme;
-      }
-      if (pack.sound !== undefined) { sound = pack.sound; localStorage.setItem("snd", sound ? "1" : "0"); }
-      if (pack.comp !== undefined) { comp = pack.comp; localStorage.setItem("comp", comp ? "1" : "0"); document.getElementById("main").classList.toggle("compact", comp); }
-      if (pack.notif !== undefined) { notifEnabled = pack.notif; localStorage.setItem("notif", notifEnabled ? "1" : "0"); }
-      if (pack.refRate !== undefined) { refRate = pack.refRate; localStorage.setItem("ref", refRate); }
-      if (pack.sourceFilter) document.getElementById("sourceFilter").value = pack.sourceFilter;
-      if (pack.rules) { rules = pack.rules; localStorage.setItem("easRules", JSON.stringify(rules)); loadRules(); }
-      toast("Settings pack imported");
-      load();
-    } catch (err) { toast("Invalid settings pack"); }
-  };
-  reader.readAsText(file);
-  input.value = "";
+function saveSettings() {
+  myFips = new Set(document.getElementById("myFips").value.split(",").map(s => s.trim()).filter(Boolean));
+  localStorage.setItem("myFips", [...myFips].join(","));
+  toast("Settings saved");
 }
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").catch(console.error);
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  const id = t.dataset.t;
+  ["alerts","history","radar","links","stats","map"].forEach(x => document.getElementById(x).style.display = x === id ? "block" : "none");
+  document.getElementById("detail").style.display = "none";
+  document.getElementById("ctrl").style.display = id === "alerts" ? "flex" : "none";
+  if (id === "radar") document.getElementById("radarImg").src = "https://radar.weather.gov/ridge/standard/CONUS_loop.gif?" + Date.now();
+  if (id === "history") renderHistory();
+  if (id === "map") { initMap(); setTimeout(updateMap, 100); }
+});
+document.getElementById("sourceFilter").onchange = render;
+document.getElementById("qType").oninput = render;
+document.getElementById("qSearch").oninput = render;
+document.getElementById("ntBtn").onclick = function() { this.classList.toggle("on"); render(); };
+document.querySelectorAll(".chip").forEach(c => c.onclick = () => { document.getElementById("qType").value = c.dataset.c; document.querySelectorAll(".chip").forEach(x => x.classList.remove("on")); c.classList.add("on"); render(); });
+const modal = document.getElementById("modal");
+document.getElementById("setBtn").onclick = () => { document.getElementById("myFips").value = [...myFips].join(","); modal.classList.add("open"); };
+function closeM() { modal.classList.remove("open"); }
+modal.onclick = e => { if (e.target === modal) closeM(); };
+document.getElementById("compT").onclick = function() { comp = !comp; document.getElementById("main").classList.toggle("compact", comp); this.textContent = comp ? "On" : "Off"; localStorage.setItem("comp", comp ? "1" : "0"); };
+document.getElementById("sndT").onclick = function() { sound = !sound; this.textContent = sound ? "On" : "Off"; localStorage.setItem("snd", sound ? "1" : "0"); };
+document.getElementById("refSel").onchange = function() { refRate = +this.value; localStorage.setItem("ref", refRate); clearInterval(timer); if (refRate > 0) timer = setInterval(load, refRate * 1000); };
+document.getElementById("muteBtn").onclick = () => { muteUntil = Date.now() + 300000; toast("Muted for 5 minutes"); };
+document.querySelectorAll(".swatch").forEach(s => s.onclick = () => { document.body.className = s.dataset.th; localStorage.setItem("theme", s.dataset.th); document.querySelectorAll(".swatch").forEach(x => x.classList.remove("on")); s.classList.add("on"); });
+document.getElementById("fsBtn").onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+window.onscroll = () => document.getElementById("jumpBtn").style.display = window.scrollY > 400 ? "block" : "none";
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input,select")) return;
+  if (e.key === "f") document.getElementById("fsBtn").click();
+  if (e.key === "r") load();
+  if (e.key === "t") injectTest();
+  if (e.key === "Escape") { closeM(); showList(); }
+});
+function startApp() {
+  document.getElementById("compT").textContent = comp ? "On" : "Off";
+  document.getElementById("sndT").textContent = sound ? "On" : "Off";
+  document.getElementById("notifToggle").textContent = notifEnabled ? "On" : "Off";
+  document.getElementById("refSel").value = refRate;
+  document.getElementById("myFips").value = [...myFips].join(",");
+  const th = localStorage.getItem("theme");
+  if (th) { document.body.className = th; document.querySelector(`.swatch[data-th="${th}"]`)?.classList.add("on"); }
+  if (comp) document.getElementById("main").classList.add("compact");
+  load();
+  if (refRate > 0) timer = setInterval(load, refRate * 1000);
+  setInterval(() => { if (document.getElementById("radar").style.display !== "none") document.getElementById("radarImg").src = "https://radar.weather.gov/ridge/standard/CONUS_loop.gif?" + Date.now(); }, 120000);
 }
 let map, mapMarkers = [];
-let rules = JSON.parse(localStorage.getItem("easRules") || "[]");
-function loadRules() {
-  const ta = document.getElementById("rules");
-  if (ta) ta.value = rules.join("\n");
-}
-function saveRules() {
-  const ta = document.getElementById("rules");
-  if (!ta) return;
-  rules = ta.value.split("\n").map(s => s.trim()).filter(Boolean);
-  localStorage.setItem("easRules", JSON.stringify(rules));
-}
-function checkRules(a) {
-  for (const r of rules) {
-    const lower = r.toLowerCase();
-    const isLocal = [...myFips].some(f => (a.fips || "").includes(f));
-    const text = ((a.event || "") + " " + (a.severity || "") + " " + (a.headline || "")).toLowerCase();
-    if (lower.includes("in my area") && !isLocal) continue;
-    const keywords = lower.replace("in my area", "").split(/[|,]/).map(s => s.trim()).filter(Boolean);
-    if (keywords.some(k => text.includes(k))) {
-      notify("Rule match: " + r, a.headline || a.event);
-      if (sound && Date.now() > muteUntil) beep();
-      break;
-    }
-  }
-}
 function resetTimeline() {
-  document.getElementById("timeline").value = 100;
-  renderHistory();
+  const s = document.getElementById("timeline");
+  if (s) { s.value = 100; renderHistory(); }
 }
 function renderHistory() {
   const slider = document.getElementById("timeline");
   const label = document.getElementById("timelineLabel");
-  const list = document.getElementById("historyList");
-  if (!hist.length) { list.innerHTML = '<div class="empty">No history yet</div>'; return; }
-  const pct = +slider.value / 100;
+  const list = document.getElementById("historyList") || document.getElementById("history");
+  if (!hist.length) { if (list) list.innerHTML = '<div class="empty">No history yet</div>'; return; }
+  const pct = slider ? +slider.value / 100 : 1;
   const now = Date.now();
-  const oldest = hist.length ? Math.min(...hist.map(h => h.ts || now)) : now;
+  const oldest = Math.min(...hist.map(h => h.ts || now));
   const cutoff = oldest + (now - oldest) * pct;
-  label.textContent = pct >= 0.99 ? "Now" : new Date(cutoff).toLocaleString();
+  if (label) label.textContent = pct >= 0.99 ? "Now" : new Date(cutoff).toLocaleString();
   const filtered = hist.filter(h => (h.ts || now) <= cutoff);
-  list.innerHTML = filtered.slice(0, 50).map(a => `<div class="alert" style="cursor:default">
-    <strong>${a.headline || a.event || "Past alert"}</strong>
-    <div class="meta">${new Date(a.ts).toLocaleString()} · ${a.source || ""}</div>
+  const html = filtered.slice(0, 50).map(a => `<div class="alert" style="cursor:default">
+    <strong>${a.type || a.headline || a.event || "Past alert"}</strong>
+    <div class="meta">${new Date(a.ts || now).toLocaleString()} · ${a.source || ""}</div>
+    <div>${(a.translation || "").slice(0,140)}</div>
   </div>`).join("") || '<div class="empty">No alerts before this time</div>';
+  if (list) list.innerHTML = html;
 }
-document.addEventListener("DOMContentLoaded", () => {
-  const slider = document.getElementById("timeline");
-  if (slider) slider.oninput = renderHistory;
-  loadRules();
-});
 function initMap() {
-  if (map) return;
+  if (map || typeof L === "undefined") return;
   map = L.map("mapContainer").setView([39.8, -98.5], 4);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap"
-  }).addTo(map);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
 }
 function updateMap() {
   if (!map) initMap();
+  if (!map) return;
   mapMarkers.forEach(m => map.removeLayer(m));
   mapMarkers = [];
-  alerts.forEach((a, i) => {
-    let lat = 39 + Math.random() * 10 - 5;
-    let lon = -98 + Math.random() * 20 - 10;
+  alerts.forEach(a => {
+    const lat = 39 + Math.random() * 10 - 5;
+    const lon = -98 + Math.random() * 20 - 10;
     const m = L.circleMarker([lat, lon], {
       radius: 8,
-      color: /TOR|SVR|FFW|EXTREME/i.test(a.event || a.severity || "") ? "#ff1744" : "#ef4444",
+      color: /TOR|SVR|FFW|EXTREME/i.test(a.type || a.severity || "") ? "#ff1744" : "#ef4444",
       fillOpacity: 0.8
     }).addTo(map);
-    m.bindPopup(`<strong>${a.headline || a.event || "Alert"}</strong><br>${a.source || ""} · ${a.severity || ""}`);
-    m.on("click", () => showDetail(i));
+    m.bindPopup(`<strong>${a.type || a.headline || "Alert"}</strong><br>${a.source || ""} · ${a.severity || ""}`);
     mapMarkers.push(m);
   });
 }
+function exportSettings() {
+  const pack = {
+    myFips: [...myFips],
+    theme: localStorage.getItem("theme") || "",
+    sound, comp, notifEnabled, refRate,
+    rules: document.getElementById("rules")?.value || ""
+  };
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(pack, null, 2)], {type:"application/json"}));
+  a.download = "eas-settings.json";
+  a.click();
+}
+function importSettings(input) {
+  const f = input.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    try {
+      const pack = JSON.parse(e.target.result);
+      if (pack.myFips) { myFips = new Set(pack.myFips); localStorage.setItem("myFips", pack.myFips.join(",")); }
+      if (pack.theme !== undefined) localStorage.setItem("theme", pack.theme);
+      if (pack.rules && document.getElementById("rules")) document.getElementById("rules").value = pack.rules;
+      toast("Settings imported");
+      location.reload();
+    } catch { toast("Import failed"); }
+  };
+  r.readAsText(f);
+}
+function loadRules() {
+  const r = localStorage.getItem("easRules");
+  if (r && document.getElementById("rules")) document.getElementById("rules").value = r;
+}
+function saveRules() {
+  const el = document.getElementById("rules");
+  if (el) localStorage.setItem("easRules", el.value);
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const s = document.getElementById("timeline");
+  if (s) s.oninput = renderHistory;
+  loadRules();
+  if (document.getElementById("rules")) document.getElementById("rules").onchange = saveRules;
+});
 if (sessionStorage.getItem("easAuth") === "1") startApp();
 </script>
 </body>
