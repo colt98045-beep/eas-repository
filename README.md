@@ -42,10 +42,16 @@ This dashboard uses publicly available endpoints that require no API key:
 
 Requests include a descriptive User-Agent (`EASRepository/1.0`). Please respect the terms of the upstream services. Data is proxied and displayed locally; nothing is stored on remote servers by this project.
 
+See the [NOTICE](NOTICE) file for a short list of third-party sources.
+
 ## Notes
 - Alerts are cached briefly (≈10 seconds) to reduce load on upstream APIs.
 - Some advanced UI features (radar, audio, history) are functional but may still receive polish in future updates.
 - For questions about the GWES APIs, see https://alerts.globaleas.org/swagger/ or contact the GWES team.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the project, report issues, and submit changes.
 
 ## License
 
