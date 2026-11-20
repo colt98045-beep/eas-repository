@@ -9,12 +9,13 @@ import os
 API_BASE = "https://alerts.globaleas.org"
 PORT = 8080
 HTML_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+USER_AGENT = "EASRepository/1.0 (https://github.com/colt98045-beep/eas-repository)"
 
 _cache = {"data": None, "ts": 0}
 CACHE_TTL = 10
 
 def fetch_json(url, timeout=15):
-    req = urllib.request.Request(url, headers={"User-Agent": "EASRepository/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
@@ -78,7 +79,7 @@ class Handler(BaseHTTPRequestHandler):
             self._proxy(
                 "https://api.weather.gov/alerts/active",
                 content_type="application/json",
-                headers={"Accept": "application/geo+json", "User-Agent": "EASRepository/1.0"}
+                headers={"Accept": "application/geo+json", "User-Agent": USER_AGENT}
             )
             return
 
@@ -93,7 +94,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _proxy(self, url, content_type="application/xml", headers=None, timeout=20):
         try:
-            hdrs = {"User-Agent": "EASRepository/1.0 (local)"}
+            hdrs = {"User-Agent": USER_AGENT}
             if headers:
                 hdrs.update(headers)
             req = urllib.request.Request(url, headers=hdrs)
