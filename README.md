@@ -22,8 +22,10 @@ To add real screenshots: run the dashboard, take screenshots of the main views, 
 - Desktop notifications
 - County/FIPS local alerting
 - National radar loop
-- Multiple themes
+- Multiple themes (persisted)
 - Alert history, detail view, and audio playback
+- Offline/cached mode with clear last-update status
+- Export/import settings packs (FIPS, theme, filters, etc.)
 - 100% local — no accounts or API keys required
 
 ## Requirements
@@ -60,6 +62,8 @@ See the [NOTICE](NOTICE) file for a short list of third-party sources.
 
 ## Notes
 - Alerts are cached briefly (≈10 seconds) to reduce load on upstream APIs.
+- On feed errors the dashboard keeps showing the last good data and marks itself offline/cached.
+- Settings (including theme and FIPS) can be exported/imported as a JSON pack from the Settings modal.
 - Some advanced UI features (radar, audio, history) are functional but may still receive polish in future updates.
 - For questions about the GWES APIs, see https://alerts.globaleas.org/swagger/ or contact the GWES team.
 
