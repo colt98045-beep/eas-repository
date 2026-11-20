@@ -48,4 +48,9 @@ Requests include a descriptive User-Agent (`EASRepository/1.0`). Please respect 
 - For questions about the GWES APIs, see https://alerts.globaleas.org/swagger/ or contact the GWES team.
 
 ## License
-See LICENSE file.
+
+This project is licensed under the Apache License 2.0.
+
+See the [LICENSE](LICENSE) file for the full text.
+
+Copyright 2026 Colt
