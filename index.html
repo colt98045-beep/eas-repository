@@ -93,6 +93,7 @@
   #loginBox { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:36px; width:90%; max-width:380px; text-align:center; }
   #loginBox input { width:100%; padding:12px; margin:10px 0; }
   .jump { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:999px; display:none; cursor:pointer; z-index:60; }
+  #mapContainer { height:500px; background:#1a2332; }
 </style>
 </head>
 <body>
@@ -420,7 +421,7 @@ document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
   document.getElementById("ctrl").style.display = id === "alerts" ? "flex" : "none";
   if (id === "radar") document.getElementById("radarImg").src = "https://radar.weather.gov/ridge/standard/CONUS_loop.gif?" + Date.now();
   if (id === "history") renderHistory();
-  if (id === "map") { initMap(); setTimeout(updateMap, 100); }
+  if (id === "map") { setTimeout(() => { initMap(); updateMap(); if (map) map.invalidateSize(); }, 150); }
 });
 document.getElementById("sourceFilter").onchange = render;
 document.getElementById("qType").oninput = render;
@@ -482,26 +483,37 @@ function renderHistory() {
   if (list) list.innerHTML = html;
 }
 function initMap() {
-  if (map || typeof L === "undefined") return;
+  if (map) return;
+  if (typeof L === "undefined") {
+    document.getElementById("mapContainer").innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Map library failed to load. Check your internet connection and refresh.</div>';
+    return;
+  }
   map = L.map("mapContainer").setView([39.8, -98.5], 4);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 18 }).addTo(map);
+  setTimeout(() => map && map.invalidateSize(), 200);
 }
 function updateMap() {
   if (!map) initMap();
   if (!map) return;
   mapMarkers.forEach(m => map.removeLayer(m));
   mapMarkers = [];
+  if (!alerts.length) {
+    L.marker([39.8, -98.5]).addTo(map).bindPopup("No active alerts to show").openPopup();
+  }
   alerts.forEach(a => {
-    const lat = 39 + Math.random() * 10 - 5;
-    const lon = -98 + Math.random() * 20 - 10;
+    const lat = 39 + Math.random() * 8 - 4;
+    const lon = -98 + Math.random() * 16 - 8;
     const m = L.circleMarker([lat, lon], {
-      radius: 8,
+      radius: 9,
       color: /TOR|SVR|FFW|EXTREME/i.test(a.type || a.severity || "") ? "#ff1744" : "#ef4444",
-      fillOpacity: 0.8
+      fillColor: "#ef4444",
+      fillOpacity: 0.75,
+      weight: 2
     }).addTo(map);
     m.bindPopup(`<strong>${a.type || a.headline || "Alert"}</strong><br>${a.source || ""} · ${a.severity || ""}`);
     mapMarkers.push(m);
   });
+  setTimeout(() => map && map.invalidateSize(), 150);
 }
 function exportSettings() {
   const pack = {
