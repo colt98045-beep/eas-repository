@@ -22,7 +22,8 @@ import os
 
 API_BASE = "https://alerts.globaleas.org"
 PORT = int(os.environ.get("EAS_PORT", "8080"))
-HTML_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+HTML_FILE = os.path.join(BASE_DIR, "index.html")
 USER_AGENT = "EASRepository/1.0 (https://github.com/colt98045-beep/eas-repository)"
 
 _cache = {"data": None, "ts": 0}
@@ -50,6 +51,22 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+
+        # Serve static PWA files
+        if path in ("/manifest.json", "/sw.js"):
+            fname = path.lstrip("/")
+            fpath = os.path.join(BASE_DIR, fname)
+            ctype = "application/json" if fname.endswith(".json") else "application/javascript"
+            try:
+                with open(fpath, "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.end_headers()
+                self.wfile.write(content)
+            except FileNotFoundError:
+                self.send_error(404)
+            return
 
         # Serve the frontend
         if path in ("/", "/index.html"):
