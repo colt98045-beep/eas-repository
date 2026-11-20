@@ -6,6 +6,16 @@ It runs entirely on your machine, proxies the public GWES Central Alert Reposito
 
 **Status:** v1.0.0-beta — usable early release. Core features are working; some polish and edge-case handling may still improve. Project name is temporary pending final confirmation.
 
+## Screenshots
+
+<!-- Replace these with actual screenshots of the dashboard -->
+
+![Alerts list](https://via.placeholder.com/800x450.png?text=Alerts+List+Screenshot)
+![Detail view](https://via.placeholder.com/800x450.png?text=Alert+Detail+Screenshot)
+![Radar tab](https://via.placeholder.com/800x450.png?text=Radar+Tab+Screenshot)
+
+To add real screenshots: run the dashboard, take screenshots of the main views, and replace the placeholder images above (or commit them to a `screenshots/` folder and update the links).
+
 ## Features
 - Live GWES CAR + NOAA CAP alerts
 - Source filtering
@@ -27,11 +37,15 @@ It runs entirely on your machine, proxies the public GWES Central Alert Reposito
    git clone https://github.com/colt98045-beep/eas-repository.git
    cd eas-repository
    ```
-2. Run the server:
+2. (Optional) Choose a port:
+   ```bash
+   export EAS_PORT=3000   # default is 8080
+   ```
+3. Run the server:
    ```bash
    python eas_monitor.py
    ```
-3. Open your browser to http://localhost:8080
+4. Open your browser to http://localhost:8080 (or whatever port you set)
 
 Press Ctrl+C in the terminal to stop the server.
 
