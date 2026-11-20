@@ -121,6 +121,7 @@ limitations under the License.
   <div class="header-meta">
     <div class="badge" id="badge">0</div>
     <span id="status" style="color:var(--muted);font-size:.85rem"></span>
+    <span id="lastUpdate" style="color:var(--muted);font-size:.75rem;margin-left:8px"></span>
     <button class="icon-btn" id="fsBtn">⛶</button>
     <button class="icon-btn" id="setBtn">⚙</button>
   </div>
@@ -214,6 +215,10 @@ limitations under the License.
       </div>
     </div>
     <div class="setting-row"><span>Clear history</span><button onclick="hist=[];localStorage.removeItem('easHist');renderHistory();toast('History cleared')">Clear</button></div>
+    <div class="setting-row"><span>Export settings pack</span><button onclick="exportSettings()">Export</button></div>
+    <div class="setting-row"><span>Import settings pack</span><button onclick="document.getElementById('importFile').click()">Import</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importSettings(this)">
+    </div>
     <div class="setting-row"><span>Log out</span><button onclick="logout()">Log out</button></div>
     <button class="primary" style="width:100%;margin-top:14px" onclick="saveSettings();closeM()">Save & Close</button>
   </div>
@@ -344,10 +349,13 @@ async function load() {
     renderAlerts();
     document.getElementById("badge").textContent = alerts.length;
     document.getElementById("badge").classList.toggle("hot", alerts.some(a => /TOR|SVR|FFW|TORNADO|SEVERE/i.test(a.event || "")));
-    document.getElementById("status").textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    document.getElementById("status").textContent = "Live";
+    document.getElementById("lastUpdate").textContent = new Date().toLocaleTimeString();
   } catch (e) {
-    document.getElementById("status").textContent = "Error loading feeds";
+    document.getElementById("status").textContent = "Offline / feed error — showing last data";
+    document.getElementById("lastUpdate").textContent = "(cached)";
     console.error(e);
+    if (alerts.length) renderAlerts();
   }
   clearTimeout(timer);
   if (refRate) timer = setTimeout(load, refRate * 1000);
@@ -465,6 +473,52 @@ function exportJSON() {
   a.href = URL.createObjectURL(blob);
   a.download = "eas-alerts.json";
   a.click();
+}
+function exportSettings() {
+  const pack = {
+    version: "1.0",
+    myFips: [...myFips],
+    theme: localStorage.getItem("theme") || "",
+    sound: sound,
+    comp: comp,
+    notif: notifEnabled,
+    refRate: refRate,
+    sourceFilter: document.getElementById("sourceFilter").value
+  };
+  const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "eas-settings-pack.json";
+  a.click();
+  toast("Settings pack exported");
+}
+function importSettings(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const pack = JSON.parse(e.target.result);
+      if (pack.myFips) {
+        myFips = new Set(pack.myFips);
+        localStorage.setItem("myFips", [...myFips].join(","));
+        document.getElementById("myFips").value = [...myFips].join(",");
+      }
+      if (pack.theme !== undefined) {
+        localStorage.setItem("theme", pack.theme);
+        document.body.className = pack.theme;
+      }
+      if (pack.sound !== undefined) { sound = pack.sound; localStorage.setItem("snd", sound ? "1" : "0"); }
+      if (pack.comp !== undefined) { comp = pack.comp; localStorage.setItem("comp", comp ? "1" : "0"); document.getElementById("main").classList.toggle("compact", comp); }
+      if (pack.notif !== undefined) { notifEnabled = pack.notif; localStorage.setItem("notif", notifEnabled ? "1" : "0"); }
+      if (pack.refRate !== undefined) { refRate = pack.refRate; localStorage.setItem("ref", refRate); }
+      if (pack.sourceFilter) document.getElementById("sourceFilter").value = pack.sourceFilter;
+      toast("Settings pack imported");
+      load();
+    } catch (err) { toast("Invalid settings pack"); }
+  };
+  reader.readAsText(file);
+  input.value = "";
 }
 if (sessionStorage.getItem("easAuth") === "1") startApp();
 </script>
