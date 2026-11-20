@@ -1,0 +1,14 @@
+EAS Repository
+Copyright 2026 Colt
+
+This product includes data and services from:
+
+- Global Weather & EAS Society (GWES) Central Alert Repository
+  https://alerts.globaleas.org
+  Public API, no key required. Used under their public terms.
+
+- National Oceanic and Atmospheric Administration (NOAA)
+  CAP feeds via alerts.weather.gov and api.weather.gov
+  Public domain U.S. government works.
+
+Requests to these services include a descriptive User-Agent identifying this project.
