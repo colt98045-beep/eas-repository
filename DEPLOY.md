@@ -1,0 +1,146 @@
+# Deployment Guide
+
+How to run EAS Repository locally, and how to host it elsewhere while keeping the local
+option available.
+
+- [Key files](#key-files)
+- [1. Local run (recommended)](#1-local-run-recommended)
+- [2. Docker](#2-docker)
+- [3. Railway](#3-railway)
+- [4. Render](#4-render)
+- [5. Fly.io](#5-flyio)
+- [6. Expose a local instance](#6-expose-a-local-instance-no-cloud-hosting)
+- [7. Important notes](#7-important-notes)
+- [8. Quick health check](#8-quick-health-check)
+
+## Key files
+
+| File | Purpose |
+| --- | --- |
+| `eas_monitor.py` | Python backend: serves the dashboard and proxies GWES/NOAA feeds |
+| `index.html` | Frontend dashboard |
+| `manifest.json` | PWA manifest |
+| `sw.js` | Service worker |
+
+The backend uses only the Python standard library. No `pip install` is required.
+
+## 1. Local run (recommended)
+
+Requirements: Python 3.8+
+
+```bash
+git clone https://github.com/colt98045-beep/eas-repository.git
+cd eas-repository
+python eas_monitor.py
+```
+
+Open <http://localhost:8080>. The default password is `eas`; change it in **Settings** after
+logging in.
+
+Optional port:
+
+```bash
+export EAS_PORT=3000
+python eas_monitor.py
+```
+
+Stop with <kbd>Ctrl</kbd>+<kbd>C</kbd>.
+
+## 2. Docker
+
+Create a `Dockerfile` in the repo root:
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY . .
+EXPOSE 8080
+ENV EAS_PORT=8080
+CMD ["python", "eas_monitor.py"]
+```
+
+Build and run:
+
+```bash
+docker build -t eas-repo .
+docker run -p 8080:8080 eas-repo
+```
+
+`docker-compose.yml` example:
+
+```yaml
+services:
+  eas:
+    build: .
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+```
+
+The same image works locally and on any Docker host.
+
+## 3. Railway
+
+1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**.
+2. Select `colt98045-beep/eas-repository`.
+3. Deploy. Railway sets `PORT`, which the server reads automatically when `EAS_PORT` is
+   not set. Railway gives you a public URL.
+
+The server binds to `0.0.0.0`, so no other changes are needed.
+
+## 4. Render
+
+1. [render.com](https://render.com) → **New** → **Web Service** → connect the GitHub repo.
+2. Runtime: **Python 3**
+3. Build command: leave blank (no dependencies)
+4. Start command: `python eas_monitor.py`
+5. Deploy. Render sets `PORT`, which the server picks up automatically.
+
+The free tier sleeps after inactivity.
+
+## 5. Fly.io
+
+1. Install `flyctl`.
+2. Run `fly launch` (accept the defaults or use the Dockerfile above).
+3. Run `fly deploy`.
+
+## 6. Expose a local instance (no cloud hosting)
+
+Cloudflare Tunnel (public HTTPS, no open ports):
+
+```bash
+cloudflared tunnel --url http://localhost:8080
+```
+
+Tailscale Funnel (temporary public URL):
+
+```bash
+tailscale funnel 8080
+```
+
+These keep the app running only on your machine.
+
+## 7. Important notes
+
+- The app is designed to be local-first. Remote hosting is optional.
+- All data is proxied; nothing is stored on the server except a short in-memory cache.
+- Change the default password after first login. The password lock runs in the browser
+  and is **not** real authentication. For a public deployment, put the app behind an access
+  layer such as Cloudflare Access or Tailscale. See [SECURITY.md](SECURITY.md).
+- For production, use a process manager (systemd, a Docker restart policy, etc.).
+- Requests to GWES and NOAA include a descriptive User-Agent identifying this project.
+
+## 8. Quick health check
+
+After starting:
+
+```bash
+curl http://localhost:8080/api/active
+curl http://localhost:8080/
+```
+
+You should see JSON alerts and the HTML dashboard.
+
+---
+
+Copyright 2026 Colt. Licensed under the [Apache License 2.0](LICENSE).
