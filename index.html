@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+  EAS Repository - https://github.com/colt98045-beep/eas-repository
+  Copyright 2026 Colt. Licensed under the Apache License, Version 2.0.
+  See LICENSE and NOTICE in the repository for details.
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -94,6 +99,8 @@
   #loginBox input { width:100%; padding:12px; margin:10px 0; }
   .jump { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:999px; display:none; cursor:pointer; z-index:60; }
   #mapContainer { height:500px; background:#1a2332; }
+  .site-footer { max-width:1100px; margin:24px auto 0; padding:16px 24px 32px; color:var(--muted); font-size:.75rem; text-align:center; line-height:1.6; }
+  .site-footer a { color:inherit; }
 </style>
 </head>
 <body>
@@ -167,16 +174,16 @@
   <div id="links" style="display:none">
     <h2 style="margin-top:0">Useful Links</h2>
     <div class="link-grid">
-      <a href="https://alerts.globaleas.org" target="_blank" class="link-card"><strong>GlobalEAS CAR</strong><br><span>Central Alert Repository</span></a>
-      <a href="https://app.weatherfront.com/" target="_blank" class="link-card"><strong>WeatherFront</strong><br><span>WeatherFront App</span></a>
-      <a href="https://www.weather.gov" target="_blank" class="link-card"><strong>NWS</strong><br><span>National Weather Service</span></a>
-      <a href="https://www.nhc.noaa.gov" target="_blank" class="link-card"><strong>NHC</strong><br><span>National Hurricane Center</span></a>
-      <a href="https://www.spc.noaa.gov" target="_blank" class="link-card"><strong>SPC</strong><br><span>Storm Prediction Center</span></a>
-      <a href="https://www.cpc.ncep.noaa.gov" target="_blank" class="link-card"><strong>CPC</strong><br><span>Climate Prediction Center</span></a>
-      <a href="https://www.wpc.ncep.noaa.gov" target="_blank" class="link-card"><strong>WPC</strong><br><span>Weather Prediction Center</span></a>
-      <a href="https://www.swpc.noaa.gov" target="_blank" class="link-card"><strong>SWPC</strong><br><span>Space Weather Prediction Center</span></a>
-      <a href="https://radar.weather.gov" target="_blank" class="link-card"><strong>NWS Radar</strong><br><span>Official radar site</span></a>
-      <a href="https://www.wunderground.com" target="_blank" class="link-card"><strong>Weather Underground</strong><br><span>Forecasts & maps</span></a>
+      <a href="https://alerts.globaleas.org" target="_blank" rel="noopener noreferrer" class="link-card"><strong>GlobalEAS CAR</strong><br><span>Central Alert Repository</span></a>
+      <a href="https://app.weatherfront.com/" target="_blank" rel="noopener noreferrer" class="link-card"><strong>WeatherFront</strong><br><span>WeatherFront App</span></a>
+      <a href="https://www.weather.gov" target="_blank" rel="noopener noreferrer" class="link-card"><strong>NWS</strong><br><span>National Weather Service</span></a>
+      <a href="https://www.nhc.noaa.gov" target="_blank" rel="noopener noreferrer" class="link-card"><strong>NHC</strong><br><span>National Hurricane Center</span></a>
+      <a href="https://www.spc.noaa.gov" target="_blank" rel="noopener noreferrer" class="link-card"><strong>SPC</strong><br><span>Storm Prediction Center</span></a>
+      <a href="https://www.cpc.ncep.noaa.gov" target="_blank" rel="noopener noreferrer" class="link-card"><strong>CPC</strong><br><span>Climate Prediction Center</span></a>
+      <a href="https://www.wpc.ncep.noaa.gov" target="_blank" rel="noopener noreferrer" class="link-card"><strong>WPC</strong><br><span>Weather Prediction Center</span></a>
+      <a href="https://www.swpc.noaa.gov" target="_blank" rel="noopener noreferrer" class="link-card"><strong>SWPC</strong><br><span>Space Weather Prediction Center</span></a>
+      <a href="https://radar.weather.gov" target="_blank" rel="noopener noreferrer" class="link-card"><strong>NWS Radar</strong><br><span>Official radar site</span></a>
+      <a href="https://www.wunderground.com" target="_blank" rel="noopener noreferrer" class="link-card"><strong>Weather Underground</strong><br><span>Forecasts & maps</span></a>
     </div>
   </div>
   <div id="stats" style="display:none"></div>
@@ -185,6 +192,10 @@
     <div id="detailContent" class="alert" style="cursor:default"></div>
   </div>
 </div>
+<footer class="site-footer">
+  Alert data: <a href="https://alerts.globaleas.org" target="_blank" rel="noopener noreferrer">GWES Central Alert Repository</a> (Global Weather &amp; EAS Society, LLC) and NOAA/NWS.<br>
+  EAS Repository is an independent project and is not affiliated with or endorsed by GWES, NOAA, or the National Weather Service.
+</footer>
 <button class="jump" id="jumpBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Top</button>
 <div class="modal-overlay" id="modal">
   <div class="modal">
@@ -293,7 +304,7 @@ async function loadNoaa() {
     const text = await (await fetch("/api/noaa")).text();
     const xml = new DOMParser().parseFromString(text, "text/xml");
     return [...xml.querySelectorAll("entry")].map(e => ({
-      id: "noaa-" + Math.random(),
+      id: "noaa-" + (e.querySelector("id")?.textContent || Math.random()),
       type: (e.querySelector("cap\\:event, event")?.textContent || "NOAA").slice(0, 8).toUpperCase(),
       severity: (e.querySelector("cap\\:severity, severity")?.textContent || "UNKNOWN").toUpperCase(),
       originator: "NOAA",
