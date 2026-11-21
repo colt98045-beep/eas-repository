@@ -14,14 +14,15 @@
 # limitations under the License.
 
 import json
-import urllib.request
-import time
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse
 import os
+import time
+import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse
 
 API_BASE = "https://alerts.globaleas.org"
-PORT = int(os.environ.get("EAS_PORT", "8080"))
+# EAS_PORT takes precedence; PORT is the variable most hosting platforms set.
+PORT = int(os.environ.get("EAS_PORT") or os.environ.get("PORT") or "8080")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HTML_FILE = os.path.join(BASE_DIR, "index.html")
 USER_AGENT = "EASRepository/1.0 (https://github.com/colt98045-beep/eas-repository)"
@@ -29,10 +30,12 @@ USER_AGENT = "EASRepository/1.0 (https://github.com/colt98045-beep/eas-repositor
 _cache = {"data": None, "ts": 0}
 CACHE_TTL = 10
 
+
 def fetch_json(url, timeout=15):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
+
 
 def fetch_active_alerts():
     now = time.time()
@@ -46,6 +49,7 @@ def fetch_active_alerts():
     except Exception as e:
         print(f"GlobalEAS fetch error: {e}")
         return _cache["data"] or []
+
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -89,10 +93,7 @@ class Handler(BaseHTTPRequestHandler):
 
         # NOAA national CAP/Atom feed
         if path == "/api/noaa":
-            self._proxy(
-                "https://alerts.weather.gov/cap/us.php?x=1",
-                content_type="application/xml"
-            )
+            self._proxy("https://alerts.weather.gov/cap/us.php?x=1", content_type="application/xml")
             return
 
         # Optional: NOAA by state (example: /api/noaa/FL)
@@ -101,7 +102,7 @@ class Handler(BaseHTTPRequestHandler):
             if len(state) == 2:
                 self._proxy(
                     f"https://alerts.weather.gov/cap/wwaatmget.php?x={state}",
-                    content_type="application/xml"
+                    content_type="application/xml",
                 )
                 return
 
@@ -110,7 +111,7 @@ class Handler(BaseHTTPRequestHandler):
             self._proxy(
                 "https://api.weather.gov/alerts/active",
                 content_type="application/json",
-                headers={"Accept": "application/geo+json", "User-Agent": USER_AGENT}
+                headers={"Accept": "application/geo+json", "User-Agent": USER_AGENT},
             )
             return
 
@@ -142,6 +143,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
         pass
+
 
 if __name__ == "__main__":
     print(f"Starting EAS Repository on http://localhost:{PORT}")
