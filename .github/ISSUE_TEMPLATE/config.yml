@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/colt98045-beep/eas-repository/blob/main/SECURITY.md
+    about: Please don't post vulnerability details in a public issue. See SECURITY.md.
+  - name: Questions about the GWES alert APIs
+    url: https://alerts.globaleas.org/swagger/
+    about: Upstream data and API questions belong to the GWES team.

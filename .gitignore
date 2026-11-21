@@ -41,3 +41,11 @@ desktop.ini
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Linters / type checkers
+.ruff_cache/
+.mypy_cache/
+
+# Local exports from the dashboard
+eas-settings.json
+eas-alerts*.json
