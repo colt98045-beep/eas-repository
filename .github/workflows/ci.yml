@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python lint and smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Ruff lint
+        run: ruff check --output-format=github .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Compile check
+        run: python -m py_compile eas_monitor.py
+
+      - name: Server smoke test
+        run: |
+          EAS_PORT=8765 python eas_monitor.py &
+          for i in $(seq 1 20); do
+            curl -fsS -o /dev/null http://localhost:8765/ && break
+            sleep 0.5
+          done
+          curl -fsS http://localhost:8765/ | grep -q "<title>EAS Repository</title>"
+          curl -fsS http://localhost:8765/manifest.json | python -m json.tool > /dev/null
+          curl -fsS -o /dev/null http://localhost:8765/sw.js
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8765/does-not-exist)" = "404"
+          echo "Smoke test passed"
+
+  frontend:
+    name: Frontend syntax checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate manifest.json
+        run: node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'))"
+
+      - name: Check sw.js syntax
+        run: node --check sw.js
+
+      - name: Check inline script syntax in index.html
+        run: |
+          node -e "
+            const fs = require('fs');
+            const html = fs.readFileSync('index.html', 'utf8');
+            const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+            if (!scripts.length) { console.error('No inline scripts found'); process.exit(1); }
+            fs.writeFileSync('/tmp/inline.js', scripts.join('\n;\n'));
+            console.log('Extracted ' + scripts.length + ' inline script(s)');
+          "
+          node --check /tmp/inline.js
