@@ -8,13 +8,17 @@ It runs entirely on your machine, proxies the public GWES Central Alert Reposito
 
 ## Screenshots
 
-<!-- Replace these with actual screenshots of the dashboard -->
+**Active alerts**
 
-![Alerts list](https://via.placeholder.com/800x450.png?text=Alerts+List+Screenshot)
-![Detail view](https://via.placeholder.com/800x450.png?text=Alert+Detail+Screenshot)
-![Radar tab](https://via.placeholder.com/800x450.png?text=Radar+Tab+Screenshot)
+![Active alerts tab](docs/screenshots/active.png)
 
-To add real screenshots: run the dashboard, take screenshots of the main views, and replace the placeholder images above (or commit them to a `screenshots/` folder and update the links).
+**Alert history**
+
+![History tab with timeline](docs/screenshots/history.png)
+
+**Radar**
+
+![NWS national radar loop](docs/screenshots/radar.png)
 
 ## Features
 - Live GWES CAR + NOAA CAP alerts
