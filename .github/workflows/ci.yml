@@ -72,3 +72,35 @@ jobs:
             console.log('Extracted ' + scripts.length + ' inline script(s)');
           "
           node --check /tmp/inline.js
+
+  worker:
+    name: Cloudflare Worker deploy guard
+    # Every push to main is deployed by Cloudflare Workers Builds (`npx wrangler deploy`).
+    # This job fails if a change would drop the Turnstile gate, the /api routes or the asset allowlist.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Check src/index.js syntax
+        run: node --check src/index.js
+
+      - name: Check wrangler.jsonc and .assetsignore
+        run: node scripts/check-worker-config.mjs
+
+      - name: Turnstile gate tests
+        run: node tests/worker-gate.test.mjs
+
+      - name: API route tests
+        run: node tests/worker-api.test.mjs
+
+      - name: Wrangler dry-run build (same wrangler Workers Builds uses, no credentials)
+        run: |
+          npx --yes wrangler deploy --dry-run --outdir /tmp/worker-dry-run 2>&1 | tee /tmp/dry-run.log
+          grep -q "env.ASSETS" /tmp/dry-run.log
+          grep -q "env.TURNSTILE_SITEKEY" /tmp/dry-run.log
+          grep -q "env.TURNSTILE_HOSTNAMES" /tmp/dry-run.log
+          test -s /tmp/worker-dry-run/index.js
