@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - GitHub Actions CI: ruff lint/format check, JavaScript syntax check, JSON validation,
   and a server smoke test.
 - Footer in the dashboard with GWES / NOAA attribution and a non-affiliation note.
+- CI job "Cloudflare Worker deploy guard": checks `wrangler.jsonc` and `.assetsignore`,
+  runs Turnstile gate and API route tests for `src/index.js`, and a `wrangler deploy --dry-run`.
 - The server also reads the `PORT` environment variable when `EAS_PORT` is not set.
 
 ### Fixed

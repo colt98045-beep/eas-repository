@@ -12,6 +12,7 @@ option available.
 - [6. Expose a local instance](#6-expose-a-local-instance-no-cloud-hosting)
 - [7. Important notes](#7-important-notes)
 - [8. Quick health check](#8-quick-health-check)
+- [9. Cloudflare Workers (hosted instance)](#9-cloudflare-workers-hosted-instance)
 
 ## Key files
 
@@ -141,10 +142,35 @@ curl http://localhost:8080/
 
 You should see JSON alerts and the HTML dashboard.
 
+## 9. Cloudflare Workers (hosted instance)
+
+The hosted US instance runs as a Cloudflare Worker. `wrangler.jsonc` and `src/index.js` define it: the Worker serves `index.html`, `manifest.json` and `sw.js` as static assets (see `.assetsignore`), puts a Turnstile check in front of the site, and serves `/api/active` (GWES), `/api/noaa`, `/api/noaa/{XX}` and `/api/nws` (api.weather.gov). Cloudflare Workers Builds runs `npx wrangler deploy` on every push to `main`, so keep these files in the repo. If they're removed, the next deploy ships the static page with no API. The secrets `TURNSTILE_SECRET` and `GATE_COOKIE_SECRET` live on the Worker, not in the repo.
+
+### Before you push to `main`
+
+Every push to `main`, even a docs-only one, triggers a new deploy of the live site.
+
+- CI's **Cloudflare Worker deploy guard** job checks `src/index.js`, `wrangler.jsonc` and
+  `.assetsignore`, runs the Turnstile gate and API route tests, and does a
+  `wrangler deploy --dry-run`. Run the same checks locally:
+
+  ```bash
+  node scripts/check-worker-config.mjs
+  node tests/worker-gate.test.mjs
+  node tests/worker-api.test.mjs
+  npx wrangler deploy --dry-run --outdir /tmp/worker-dry-run
+  ```
+
+- Keep `assets.run_worker_first: true`. Without it, static files skip the Turnstile check.
+- Keep `.assetsignore` as `*` plus `!index.html`, `!manifest.json` and `!sw.js`, so only the
+  web app is published (not `eas_monitor.py`, docs or config).
+- Never put `TURNSTILE_SECRET` or `GATE_COOKIE_SECRET` in `wrangler.jsonc`. They are Worker
+  secrets (`wrangler secret put`). If they are missing, the gate fails closed: visitors see
+  "Verification failed" and can't get in, but nothing is exposed.
+- After a deploy, an unauthenticated request to `/` or `/api/active` should return the
+  Turnstile check page (HTTP 403), and `/manifest.json` should return HTTP 200.
+
+
 ---
 
 Copyright 2026 Colt. Licensed under the [Apache License 2.0](LICENSE).
-
-## Cloudflare Workers (hosted instance)
-
-The hosted US instance runs as a Cloudflare Worker. `wrangler.jsonc` and `src/index.js` define it: the Worker serves `index.html`, `manifest.json` and `sw.js` as static assets (see `.assetsignore`), puts a Turnstile check in front of the site, and serves `/api/active` (GWES), `/api/noaa`, `/api/noaa/{XX}` and `/api/nws` (api.weather.gov). Cloudflare Workers Builds runs `npx wrangler deploy` on every push to `main`, so keep these files in the repo. If they're removed, the next deploy ships the static page with no API. The secrets `TURNSTILE_SECRET` and `GATE_COOKIE_SECRET` live on the Worker, not in the repo.
