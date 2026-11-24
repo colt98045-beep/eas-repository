@@ -73,6 +73,9 @@ jobs:
           "
           node --check /tmp/inline.js
 
+      - name: Lockout overlay tests (reason label per lockout reason)
+        run: node tests/maintenance-overlay.test.mjs
+
   worker:
     name: Cloudflare Worker deploy guard
     # Every push to main is deployed by Cloudflare Workers Builds (`npx wrangler deploy`).
