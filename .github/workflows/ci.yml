@@ -100,7 +100,7 @@ jobs:
       - name: Access log IP tests
         run: node tests/access-log-ip.test.mjs
 
-      - name: Privacy policy section tests
+      - name: Public /privacy page and gate exemption tests
         run: node tests/privacy.test.mjs
 
       - name: Wrangler dry-run build (same wrangler Workers Builds uses, no credentials)

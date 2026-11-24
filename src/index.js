@@ -14,6 +14,7 @@
 //   env.GATE_COOKIE_SECRET   Worker secret (HMAC key for the clearance cookie, >= 32 random bytes)
 
 import { logRequest, usGateOutcome } from "./access-log.js";
+import { PRIVACY_HTML } from "./privacy.js";
 
 const VERIFY_PATH = '/__turnstile/verify';
 const EXPECTED_ACTION = 'gate';
@@ -24,6 +25,10 @@ const MAX_FORM_BYTES = 8 * 1024;
 // Public, non-sensitive files browsers fetch WITHOUT cookies (the web app manifest
 // is requested with credentials "omit"), so they would otherwise get the challenge page.
 const UNGATED_PATHS = new Set(['/manifest.json']);
+// The privacy policy must be readable before the Turnstile check, because the
+// gate logs challenged visitors. Exact pathnames only, no query string, served
+// as a static string from src/privacy.js (never from ASSETS, no cookies, no API).
+const PUBLIC_PRIVACY_PATHS = new Set(['/privacy', '/privacy/']);
 
 // ---------------------------------------------------------------------------
 // Original logic: the static assets, plus the API routes from eas_monitor.py
@@ -147,6 +152,13 @@ const gateWorker = {
         return text('Method Not Allowed', 405, { Allow: 'POST' });
       }
       return handleVerify(request, env, url);
+    }
+
+    if (PUBLIC_PRIVACY_PATHS.has(url.pathname) && url.search === '') {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return text('Method Not Allowed', 405, { Allow: 'GET, HEAD' });
+      }
+      return privacyPage(request.method);
     }
 
     if (UNGATED_PATHS.has(url.pathname) && (request.method === 'GET' || request.method === 'HEAD')) {
@@ -389,8 +401,22 @@ button{margin-top:1rem;padding:.5rem 1.25rem;font-size:1rem;border-radius:8px;bo
 <button type="submit">Continue</button>
 </form>
 <script nonce="${nonce}">function gateDone(){document.getElementById('gate').submit();}</script>
+<p style="font-size:.8rem;margin:1.25rem 0 0"><a href="/privacy">Privacy policy</a></p>
 </main></body></html>`;
   return new Response(html, { status: 403, headers: securityHeaders(nonce) });
+}
+
+function privacyPage(method) {
+  return new Response(method === 'HEAD' ? null : PRIVACY_HTML, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'same-origin',
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    },
+  });
 }
 
 function failPage(status, returnTo) {

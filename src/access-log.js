@@ -74,6 +74,7 @@ export function scheduleAccessLog(ctx, work) {
 
 export function usGateOutcome(request, response) {
   const path = normalizePath(new URL(request.url).pathname);
+  if (path === "/privacy" && response.status === 200) return "public";
   const ctype = (response.headers.get("content-type") || "").toLowerCase();
   if ((response.status === 403 || response.status === 503) && ctype.includes("text/html")) return "challenged";
   if (path.startsWith("/api/") || path === "/__turnstile/verify") return "api";
