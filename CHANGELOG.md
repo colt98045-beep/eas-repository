@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Dismissible announcement banner on the dashboard. It reads active notices from the EAS launcher (`/api/announcements?site=us`) and fails silently if that API is unreachable. The Turnstile gate, the API routes and `.assetsignore` are unchanged.
+
 - `DEPLOY.md` (replaces `DEPLOY.txt`) with Markdown formatting.
 - `SECURITY.md`, `CHANGELOG.md`, `.editorconfig`, issue and pull request templates.
 - GitHub Actions CI: ruff lint/format check, JavaScript syntax check, JSON validation,
