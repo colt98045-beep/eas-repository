@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Access log rows now include the full client IP (`ip`, from `CF-Connecting-IP`) next to `ip_hash`. Run `schema/migrations/0002_add_ip.sql` once on `eas-access-log`; until then the logger falls back to the old insert. Logging hook only: the Turnstile gate, the API routes and `.assetsignore` are unchanged.
 - Access logging to a shared D1 database (`ACCESS_LOG`). Writes are scheduled with `waitUntil` and cannot change the Turnstile gate or API responses. The salt for hashed IPs is the Worker secret `ACCESS_LOG_SALT`.
 - Dashboard maintenance lockout, toggled from the EAS launcher admin page. A client script reads `/api/maintenance?site=us` and, if the site is locked, shows a full-screen maintenance page. If that request fails, the dashboard stays normal. The Turnstile gate, the API routes and `.assetsignore` are unchanged.
 - Dismissible announcement banner on the dashboard. It reads active notices from the EAS launcher (`/api/announcements?site=us`) and fails silently if that API is unreachable. The Turnstile gate, the API routes and `.assetsignore` are unchanged.

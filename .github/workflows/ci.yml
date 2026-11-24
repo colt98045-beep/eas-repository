@@ -97,6 +97,9 @@ jobs:
       - name: API route tests
         run: node tests/worker-api.test.mjs
 
+      - name: Access log IP tests
+        run: node tests/access-log-ip.test.mjs
+
       - name: Wrangler dry-run build (same wrangler Workers Builds uses, no credentials)
         run: |
           npx --yes wrangler deploy --dry-run --outdir /tmp/worker-dry-run 2>&1 | tee /tmp/dry-run.log
