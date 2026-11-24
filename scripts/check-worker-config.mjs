@@ -36,8 +36,12 @@ if (cfg) {
   if (!/^0x[0-9A-Za-z_-]+$/.test(v.TURNSTILE_SITEKEY || '')) fail('vars.TURNSTILE_SITEKEY missing or malformed');
   if (!String(v.TURNSTILE_HOSTNAMES || '').split(',').map((s) => s.trim()).includes('eas-repository.colt98045.workers.dev'))
     fail('vars.TURNSTILE_HOSTNAMES must include eas-repository.colt98045.workers.dev');
-  for (const s of ['TURNSTILE_SECRET', 'GATE_COOKIE_SECRET']) if (s in v) fail(`${s} is a secret and must not be in vars`);
+  for (const s of ['TURNSTILE_SECRET', 'GATE_COOKIE_SECRET', 'ACCESS_LOG_SALT']) if (s in v) fail(`${s} is a secret and must not be in vars`);
   if (cfg.routes || cfg.route) fail('routes are not expected; the site is served on workers.dev');
+  const d1 = (cfg.d1_databases || []).find((d) => d.binding === 'ACCESS_LOG');
+  if (!d1) fail('d1_databases must include the ACCESS_LOG binding');
+  if (d1.database_id !== '10a664ac-28d5-4ce9-9fe0-be2a46511b1a') fail('ACCESS_LOG database_id must be the eas-access-log id');
+  if (d1.database_name && d1.database_name !== 'eas-access-log') fail('ACCESS_LOG database_name must be eas-access-log');
 }
 
 // .assetsignore: ignore everything, then allowlist exactly the three web app files.
@@ -48,7 +52,7 @@ try {
 } catch { fail('.assetsignore is missing; every repo file would be published'); }
 if (ignore.length && JSON.stringify(ignore) !== JSON.stringify(want))
   fail(`.assetsignore must be exactly ${JSON.stringify(want)} (got ${JSON.stringify(ignore)})`);
-for (const f of ['index.html', 'manifest.json', 'sw.js', 'src/index.js']) if (!fs.existsSync(f)) fail(`${f} is missing`);
+for (const f of ['index.html', 'manifest.json', 'sw.js', 'src/index.js', 'src/access-log.js']) if (!fs.existsSync(f)) fail(`${f} is missing`);
 
 // src/index.js: the gate and API routes must still be present.
 if (fs.existsSync('src/index.js')) {

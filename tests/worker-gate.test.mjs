@@ -39,3 +39,16 @@ r = await worker.fetch(new Request(base + '/__turnstile/verify', { method: 'POST
 r = await worker.fetch(new Request(base + '/manifest.json'), env); ok((await r.text()) === 'ASSET /manifest.json', 'manifest.json ungated');
 r = await worker.fetch(new Request(base + '/sw.js'), env); ok(r.status === 403, 'sw.js gated without cookie');
 r = await worker.fetch(new Request(base + '/sw.js', { headers: { Cookie: cookie } }), env); ok((await r.text()) === 'ASSET /sw.js', 'sw.js with cookie');
+
+// Access log must never change gate or API responses, even when D1 or waitUntil throws.
+const throwD1 = { prepare() { throw new Error('d1 down'); } };
+const throwCtx = { waitUntil() { throw new Error('waitUntil down'); } };
+r = await worker.fetch(new Request(base + '/docs?x=1'), { ...env, ACCESS_LOG: throwD1 }, throwCtx);
+t = await r.text();
+ok(r.status === 403 && t.includes('cf-turnstile'), 'throwing logger does not change challenge');
+r = await worker.fetch(new Request(base + '/docs', { headers: { Cookie: cookie } }), { ...env, ACCESS_LOG: throwD1 }, throwCtx);
+ok((await r.text()) === 'ASSET /docs', 'throwing logger does not change passed response');
+r = await worker.fetch(new Request(base + '/manifest.json'), { ...env, ACCESS_LOG: throwD1 }, throwCtx);
+ok((await r.text()) === 'ASSET /manifest.json', 'throwing logger does not change ungated asset');
+r = await worker.fetch(new Request(base + '/api/active'), { ...env, ACCESS_LOG: throwD1 }, throwCtx);
+ok(r.status === 403, 'throwing logger does not change gated API');

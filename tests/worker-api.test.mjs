@@ -49,3 +49,13 @@ r = await get('/api/nope'); ok(r.status === 404, 'unknown /api/* -> 404');
 r = await worker.fetch(new Request(base + '/api/active', { method: 'POST', headers: { Cookie: cookie } }), env); ok(r.status === 501, 'POST /api/active -> 501');
 r = await get('/index.html'); ok((await r.text()) === 'ASSET /index.html', 'assets served with cookie');
 r = await worker.fetch(new Request(base + '/sw.js', { headers: { Cookie: cookie } }), env); ok((await r.text()) === 'ASSET /sw.js', 'sw.js with cookie');
+
+const throwD1 = { prepare() { throw new Error('d1 down'); } };
+const throwCtx = { waitUntil() { throw new Error('waitUntil down'); } };
+const envLog = { ...env, ACCESS_LOG: throwD1 };
+r = await worker.fetch(new Request(base + '/api/active', { headers: { Cookie: cookie } }), envLog, throwCtx);
+ok(r.status === 200 && Array.isArray(await r.json()), 'throwing logger does not change /api/active');
+r = await worker.fetch(new Request(base + '/api/nws', { headers: { Cookie: cookie } }), envLog, throwCtx);
+ok(r.status === 200, 'throwing logger does not change /api/nws');
+r = await worker.fetch(new Request(base + '/index.html', { headers: { Cookie: cookie } }), envLog, throwCtx);
+ok((await r.text()) === 'ASSET /index.html', 'throwing logger does not change assets');

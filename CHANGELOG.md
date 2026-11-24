@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Access logging to a shared D1 database (`ACCESS_LOG`). Writes are scheduled with `waitUntil` and cannot change the Turnstile gate or API responses. The salt for hashed IPs is the Worker secret `ACCESS_LOG_SALT`.
 - Dashboard maintenance lockout, toggled from the EAS launcher admin page. A client script reads `/api/maintenance?site=us` and, if the site is locked, shows a full-screen maintenance page. If that request fails, the dashboard stays normal. The Turnstile gate, the API routes and `.assetsignore` are unchanged.
 - Dismissible announcement banner on the dashboard. It reads active notices from the EAS launcher (`/api/announcements?site=us`) and fails silently if that API is unreachable. The Turnstile gate, the API routes and `.assetsignore` are unchanged.
 

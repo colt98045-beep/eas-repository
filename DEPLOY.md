@@ -144,7 +144,7 @@ You should see JSON alerts and the HTML dashboard.
 
 ## 9. Cloudflare Workers (hosted instance)
 
-The hosted US instance runs as a Cloudflare Worker. `wrangler.jsonc` and `src/index.js` define it: the Worker serves `index.html`, `manifest.json` and `sw.js` as static assets (see `.assetsignore`), puts a Turnstile check in front of the site, and serves `/api/active` (GWES), `/api/noaa`, `/api/noaa/{XX}` and `/api/nws` (api.weather.gov). Cloudflare Workers Builds runs `npx wrangler deploy` on every push to `main`, so keep these files in the repo. If they're removed, the next deploy ships the static page with no API. The secrets `TURNSTILE_SECRET` and `GATE_COOKIE_SECRET` live on the Worker, not in the repo.
+The hosted US instance runs as a Cloudflare Worker. `wrangler.jsonc` and `src/index.js` define it: the Worker serves `index.html`, `manifest.json` and `sw.js` as static assets (see `.assetsignore`), puts a Turnstile check in front of the site, and serves `/api/active` (GWES), `/api/noaa`, `/api/noaa/{XX}` and `/api/nws` (api.weather.gov). Cloudflare Workers Builds runs `npx wrangler deploy` on every push to `main`, so keep these files in the repo. If they're removed, the next deploy ships the static page with no API. The secrets `TURNSTILE_SECRET`, `GATE_COOKIE_SECRET` and `ACCESS_LOG_SALT` live on the Worker, not in the repo. The Worker also binds the `ACCESS_LOG` D1 database (`eas-access-log`) to record visits; logging is best-effort and must not change the gate or the APIs.
 
 ### Before you push to `main`
 

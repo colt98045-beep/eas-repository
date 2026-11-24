@@ -13,6 +13,8 @@
 //   env.TURNSTILE_SECRET     Worker secret (siteverify secret)
 //   env.GATE_COOKIE_SECRET   Worker secret (HMAC key for the clearance cookie, >= 32 random bytes)
 
+import { logRequest, usGateOutcome } from "./access-log.js";
+
 const VERIFY_PATH = '/__turnstile/verify';
 const EXPECTED_ACTION = 'gate';
 const COOKIE_NAME = '__Host-eas_gate';
@@ -136,7 +138,7 @@ function apiResponse(body, contentType) {
 }
 // ---------------------------------------------------------------------------
 
-export default {
+const gateWorker = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
@@ -160,6 +162,18 @@ export default {
       return text('Forbidden: Turnstile clearance required', 403);
     }
     return challengePage(env, url.pathname + url.search);
+  },
+};
+
+export default {
+  async fetch(request, env, ctx) {
+    const response = await gateWorker.fetch(request, env, ctx);
+    try {
+      logRequest(ctx, env, request, response, { site: 'us', gate: usGateOutcome(request, response) });
+    } catch {
+      // logging must never change the gate or the response
+    }
+    return response;
   },
 };
 
