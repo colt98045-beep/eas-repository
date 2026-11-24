@@ -53,6 +53,8 @@ Security problems should be reported privately. See [SECURITY.md](SECURITY.md).
 Use the public GWES and NOAA APIs only (no scraping), keep the descriptive User-Agent, and
 keep the attribution and non-affiliation notes intact. See [NOTICE](NOTICE).
 
+Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the

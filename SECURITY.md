@@ -30,3 +30,5 @@ EAS Repository is designed as a **local, single-user dashboard**. Keep these in 
   in-memory cache.
 
 Issues in the upstream data sources (GWES, NOAA/NWS) should be reported to those providers.
+
+Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) when participating in this project.

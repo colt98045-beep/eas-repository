@@ -57,6 +57,13 @@ improve. Project name is temporary pending final confirmation.
 - Installable PWA manifest
 - 100% local: no accounts or API keys required
 
+## Architecture
+
+- `eas_monitor.py` — a local Python server (standard library only) that proxies public GWES and NOAA/NWS feeds and serves the dashboard.
+- `src/index.js` — a Cloudflare Worker that serves the same dashboard behind a Cloudflare Turnstile gate, with a public `/privacy` page and access logging. The only approved gate exemption is the exact-path public `/privacy`. The APIs (`/api/active`, `/api/noaa`, `/api/noaa/{XX}`, `/api/nws`) stay behind the gate.
+
+The hosted dashboard is at [eas-repository.colt98045.workers.dev](https://eas-repository.colt98045.workers.dev/). Live status: [status page](https://eas-launcher.colt98045.workers.dev/status).
+
 ## Requirements
 
 - Python 3.8 or newer (standard library only; nothing to `pip install`)
@@ -141,7 +148,7 @@ See the [NOTICE](NOTICE) file for third-party attributions.
 ## Contributing
 
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the project,
-report issues, and submit changes. Report security issues privately as described in
+report issues, and submit changes. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues privately as described in
 [SECURITY.md](SECURITY.md). Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
