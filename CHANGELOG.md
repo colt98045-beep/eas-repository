@@ -8,6 +8,16 @@ Dates are DD/MM/YYYY.
 
 ## 24/11/2026
 
+### Changed
+- Footer, `README.md` and `NOTICE` updated with `Data: NOAA / National Weather Service`
+  attribution and a non-affiliation disclaimer covering NOAA, NWS, FEMA, the FCC
+  and the official Emergency Alert System (for information only).
+- Worker upstream caching for NOAA and NWS feeds increased to 90 seconds using
+  both the isolate cache and Cloudflare Cache API (`caches.default`), executed
+  strictly after the Turnstile gate check (never caching 403/challenge responses).
+- Synced updated `/privacy` page (D1 table retention and Turnstile disclosure)
+  and bumped service worker cache to `eas-v6`.
+
 ### Added
 - Temporary README notice that the hosted US API is down or degraded (marked
   `TEMP-OUTAGE-NOTICE` so it can be removed later). Docs only.

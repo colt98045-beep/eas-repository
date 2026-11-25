@@ -126,15 +126,16 @@ Requests include a descriptive User-Agent with the project URL
 through the public APIs only (no scraping), proxied, and displayed locally; this project
 stores nothing on remote servers. Please respect the terms of the upstream services.
 
-**Not affiliated:** EAS Repository is an independent project. It is not affiliated with,
-endorsed by, or operated by the Global Weather & EAS Society, LLC, NOAA, or the National
-Weather Service.
+**Not affiliated:** EAS Repository is an independent project for information only. It is
+not affiliated with, endorsed by, or operated by NOAA, the National Weather Service, FEMA,
+the FCC, or the Global Weather & EAS Society, LLC, and is not part of the official Emergency
+Alert System.
 
 See the [NOTICE](NOTICE) file for third-party attributions.
 
 ## Notes
 
-- Alerts are cached briefly (about 10 seconds) to reduce load on the upstream APIs.
+- Alerts are cached briefly (about 10 seconds for GWES active alerts and 90 seconds in the Worker for NOAA/NWS feeds) to reduce load on upstream APIs.
 - On feed errors the dashboard keeps showing the last good data and marks itself offline/cached.
 - Map markers use approximate positions; real county centroids may be added later.
 - For questions about the GWES APIs, see <https://alerts.globaleas.org/swagger/> or contact
