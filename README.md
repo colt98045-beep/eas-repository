@@ -1,10 +1,5 @@
 # EAS Repository
 
-<!-- TEMP-OUTAGE-NOTICE -->
-> [!WARNING]
-> **Temporary notice (since 24/11/2026):** The US EAS API is currently down or degraded. We are investigating. **Do not rely on this site for emergency alerts right now.** Keep your phone's Wireless Emergency Alerts turned on, and check the [National Weather Service](https://www.weather.gov), NOAA Weather Radio, or your local TV and radio for current warnings. Updates are on the [status page](https://eas-launcher.colt98045.workers.dev/status).
-<!-- /TEMP-OUTAGE-NOTICE -->
-
 [![CI](https://github.com/colt98045-beep/eas-repository/actions/workflows/ci.yml/badge.svg)](https://github.com/colt98045-beep/eas-repository/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)

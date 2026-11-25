@@ -45,6 +45,7 @@ Dates are DD/MM/YYYY.
   re-triggers notifications on every refresh.
 
 ### Changed
+- Removed the temporary README notice that the hosted US API was down or degraded. Docs only.
 - `eas_monitor.py` formatted with ruff (no behavior change).
 - External links open with `rel="noopener noreferrer"`.
 
