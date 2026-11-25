@@ -9,6 +9,9 @@ Dates are DD/MM/YYYY.
 ## 24/11/2026
 
 ### Changed
+- Added a documentation link to the project wiki.
+
+### Changed
 - Footer, `README.md` and `NOTICE` updated with `Data: NOAA / National Weather Service`
   attribution and a non-affiliation disclaimer covering NOAA, NWS, FEMA, the FCC
   and the official Emergency Alert System (for information only).

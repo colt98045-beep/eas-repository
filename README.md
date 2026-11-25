@@ -14,6 +14,8 @@ feeds, and shows them in one clean interface with filtering, notifications, hist
 **Status:** v1.0.0-beta. Core features work; some polish and edge-case handling may still
 improve. Project name is temporary pending final confirmation.
 
+**Documentation:** [Project wiki](https://github.com/colt98045-beep/eas-repository/wiki)
+
 ## Screenshots
 
 **Active alerts**
